@@ -1,0 +1,59 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    cluster: skillfyme
+    env: production
+
+rule_files:
+  - "alerts.yml"
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: ["alertmanager:9093"]
+
+scrape_configs:
+  - job_name: "ui-backend"
+    static_configs:
+      - targets: ["ui-backend:4000"]
+    metrics_path: "/metrics"
+
+  - job_name: "course-catalog"
+    static_configs:
+      - targets: ["course-catalog:9101"]
+
+  - job_name: "learning-path"
+    static_configs:
+      - targets: ["learning-path:9102"]
+
+  - job_name: "assessment-engine"
+    static_configs:
+      - targets: ["assessment-engine:9103"]
+
+  - job_name: "live-session"
+    static_configs:
+      - targets: ["live-session:9104"]
+
+  - job_name: "credits-currency"
+    static_configs:
+      - targets: ["credits-currency:9105"]
+
+  - job_name: "enrollment"
+    static_configs:
+      - targets: ["enrollment:9106"]
+
+  - job_name: "payment"
+    static_configs:
+      - targets: ["payment:9107"]
+
+  - job_name: "notification"
+    static_configs:
+      - targets: ["notification:9108"]
+
+  - job_name: "kubernetes-nodes"
+    kubernetes_sd_configs:
+      - role: node
+    relabel_configs:
+      - action: labelmap
+        regex: __meta_kubernetes_node_label_(.+)

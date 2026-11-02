@@ -1,0 +1,104 @@
+openapi: 3.0.3
+info:
+  title: Skillfyme Enrollment API
+  description: Course enrollment and learning progress management
+  version: 1.0.0
+
+servers:
+  - url: http://localhost:9106
+    description: Local development
+
+security:
+  - BearerAuth: []
+
+paths:
+  /api/v1/enrollments:
+    post:
+      summary: Enroll in a course
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [userId, courseId]
+              properties:
+                userId: { type: string }
+                courseId: { type: string }
+      responses:
+        '201':
+          description: Enrollment created or reactivated
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Enrollment' }
+        '400':
+          description: Missing required fields
+
+  /api/v1/enrollments/user/{userId}:
+    get:
+      summary: Get all enrollments for a user
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: User enrollment list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  enrollments:
+                    type: array
+                    items: { $ref: '#/components/schemas/Enrollment' }
+
+  /api/v1/enrollments/{id}/progress:
+    patch:
+      summary: Update course progress
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [progress, userId]
+              properties:
+                progress:
+                  type: integer
+                  minimum: 0
+                  maximum: 100
+                userId: { type: string }
+      responses:
+        '200':
+          description: Progress updated
+        '400':
+          description: Invalid progress value
+        '404':
+          description: Enrollment not found
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    Enrollment:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        userId: { type: string }
+        courseId: { type: string }
+        status: { type: string, enum: [active, paused, completed, cancelled] }
+        progress: { type: integer, minimum: 0, maximum: 100 }
+        enrolledAt: { type: string, format: date-time }
+        completedAt: { type: string, format: date-time, nullable: true }
+        updatedAt: { type: string, format: date-time }

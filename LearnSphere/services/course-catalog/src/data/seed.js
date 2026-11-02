@@ -1,0 +1,162 @@
+import mongoose from 'mongoose';
+import { Course } from '../models/Course.js';
+
+const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/skillfyme';
+
+const SEED_COURSES = [
+  {
+    title: 'Cloud-Native Architecture with Kubernetes',
+    slug: 'cloud-native-architecture-kubernetes',
+    description: 'A comprehensive course on building, deploying, and scaling cloud-native applications using Kubernetes, Docker, Istio, and modern DevOps tooling.',
+    shortDescription: 'Master Kubernetes and cloud-native architecture patterns',
+    category: 'Cloud & DevOps',
+    level: 'intermediate',
+    instructor: { id: 'inst-001', name: 'Priya Mehta', title: 'Principal Cloud Architect' },
+    price: 79.99,
+    durationHours: 24,
+    lectureCount: 120,
+    enrolledCount: 18500,
+    rating: 4.8,
+    reviewCount: 2341,
+    isFeatured: true,
+    status: 'published',
+    publishedAt: new Date('2024-01-15'),
+    tags: ['kubernetes', 'docker', 'devops', 'cloud-native', 'microservices'],
+    learningOutcomes: [
+      'Design and deploy microservice architectures on Kubernetes',
+      'Implement CI/CD pipelines with GitHub Actions',
+      'Apply distributed systems patterns (circuit breaker, saga, CQRS)',
+      'Configure Istio service mesh for observability',
+    ],
+  },
+  {
+    title: 'Full-Stack React & Node.js Development',
+    slug: 'full-stack-react-nodejs',
+    description: 'Build production-ready full-stack applications with React 18, Node.js, Express, MongoDB, and modern deployment patterns.',
+    shortDescription: 'From zero to production full-stack developer',
+    category: 'Web Development',
+    level: 'beginner',
+    instructor: { id: 'inst-002', name: 'James Whitfield', title: 'Senior Software Engineer' },
+    price: 89.99,
+    durationHours: 42,
+    lectureCount: 210,
+    enrolledCount: 42000,
+    rating: 4.7,
+    reviewCount: 5672,
+    isFeatured: true,
+    status: 'published',
+    publishedAt: new Date('2024-02-01'),
+    tags: ['react', 'nodejs', 'javascript', 'web-development', 'mongodb'],
+  },
+  {
+    title: 'Data Science with Python & Machine Learning',
+    slug: 'data-science-python-ml',
+    description: 'From Python fundamentals to deploying ML models in production. Covers pandas, scikit-learn, PyTorch, and MLOps best practices.',
+    shortDescription: 'End-to-end data science and ML engineering',
+    category: 'Data Science',
+    level: 'intermediate',
+    instructor: { id: 'inst-003', name: 'Sara Chen', title: 'Staff ML Engineer' },
+    price: 99.99,
+    durationHours: 36,
+    lectureCount: 180,
+    enrolledCount: 28000,
+    rating: 4.9,
+    reviewCount: 3210,
+    isFeatured: true,
+    status: 'published',
+    publishedAt: new Date('2024-01-20'),
+    tags: ['python', 'machine-learning', 'data-science', 'pytorch', 'mlops'],
+  },
+  {
+    title: 'Product Management Fundamentals',
+    slug: 'product-management-fundamentals',
+    description: 'Learn product strategy, user research, roadmapping, and agile delivery from practitioners at top companies.',
+    shortDescription: 'From idea to launch: the PM playbook',
+    category: 'Product',
+    level: 'beginner',
+    instructor: { id: 'inst-004', name: 'Rohan Kapoor', title: 'Director of Product' },
+    price: 0,
+    durationHours: 18,
+    lectureCount: 90,
+    enrolledCount: 12000,
+    rating: 4.6,
+    reviewCount: 1890,
+    isFeatured: true,
+    status: 'published',
+    publishedAt: new Date('2024-03-01'),
+    tags: ['product-management', 'agile', 'user-research', 'roadmap'],
+  },
+  {
+    title: 'Cybersecurity Essentials',
+    slug: 'cybersecurity-essentials',
+    description: 'Build expertise in threat detection, incident response, penetration testing, and compliance frameworks like SOC2 and ISO 27001.',
+    shortDescription: 'Protect systems and data from modern threats',
+    category: 'Security',
+    level: 'beginner',
+    instructor: { id: 'inst-005', name: 'Alex Torres', title: 'Senior Security Engineer' },
+    price: 59.99,
+    durationHours: 20,
+    lectureCount: 100,
+    enrolledCount: 9000,
+    rating: 4.5,
+    reviewCount: 1200,
+    isFeatured: false,
+    status: 'published',
+    publishedAt: new Date('2024-02-15'),
+    tags: ['cybersecurity', 'penetration-testing', 'soc2', 'incident-response'],
+  },
+  {
+    title: 'Advanced Go Programming',
+    slug: 'advanced-go-programming',
+    description: 'Deep dive into Go concurrency patterns, performance optimization, distributed systems primitives, and building production microservices.',
+    shortDescription: 'Master Go for high-performance distributed systems',
+    category: 'Backend Development',
+    level: 'advanced',
+    instructor: { id: 'inst-006', name: 'Wei Zhang', title: 'Principal Engineer, Google' },
+    price: 94.99,
+    durationHours: 30,
+    lectureCount: 150,
+    enrolledCount: 7500,
+    rating: 4.9,
+    reviewCount: 890,
+    isFeatured: false,
+    status: 'published',
+    publishedAt: new Date('2024-03-10'),
+    tags: ['golang', 'concurrency', 'microservices', 'distributed-systems'],
+  },
+  {
+    title: 'AI & Generative AI Engineering',
+    slug: 'ai-generative-ai-engineering',
+    description: 'Dive deep into LLMs, prompt engineering, RAG architectures, fine-tuning, and building production AI applications with real-world safety considerations.',
+    shortDescription: 'Build production AI systems with LLMs and RAG',
+    category: 'AI & Machine Learning',
+    level: 'intermediate',
+    instructor: { id: 'inst-007', name: 'Fatima Al-Hassan', title: 'AI Research Engineer' },
+    price: 0,
+    durationHours: 28,
+    lectureCount: 140,
+    enrolledCount: 35000,
+    rating: 4.8,
+    reviewCount: 4200,
+    isFeatured: true,
+    status: 'published',
+    publishedAt: new Date('2024-04-01'),
+    tags: ['ai', 'llm', 'rag', 'prompt-engineering', 'generative-ai'],
+  },
+];
+
+async function seed() {
+  await mongoose.connect(MONGODB_URI);
+  console.log('Connected to MongoDB');
+
+  await Course.deleteMany({});
+  console.log('Cleared existing courses');
+
+  await Course.insertMany(SEED_COURSES);
+  console.log(`Seeded ${SEED_COURSES.length} courses`);
+
+  await mongoose.disconnect();
+  console.log('Done');
+}
+
+seed().catch((err) => { console.error(err); process.exit(1); });

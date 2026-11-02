@@ -1,0 +1,171 @@
+openapi: 3.0.3
+info:
+  title: Skillfyme Course Catalog API
+  description: Manages course discovery, categories, and instructor information
+  version: 1.0.0
+  contact:
+    name: Skillfyme Engineering
+    email: eng@skillfyme.com
+
+servers:
+  - url: http://localhost:9101
+    description: Local development
+  - url: https://api.skillfyme.com/catalog
+    description: Production
+
+tags:
+  - name: courses
+    description: Course management and discovery
+  - name: categories
+    description: Course category aggregation
+
+paths:
+  /api/v1/courses:
+    get:
+      tags: [courses]
+      summary: List courses
+      description: Returns paginated, filterable list of published courses
+      parameters:
+        - name: q
+          in: query
+          schema: { type: string }
+          description: Full-text search query
+        - name: category
+          in: query
+          schema: { type: string }
+        - name: level
+          in: query
+          schema: { type: string, enum: [beginner, intermediate, advanced] }
+        - name: sort
+          in: query
+          schema: { type: string, enum: [popular, newest, rating, price_asc, price_desc], default: popular }
+        - name: page
+          in: query
+          schema: { type: integer, minimum: 1, default: 1 }
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 48, default: 12 }
+        - name: minPrice
+          in: query
+          schema: { type: number }
+        - name: maxPrice
+          in: query
+          schema: { type: number }
+      responses:
+        '200':
+          description: Course list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  courses:
+                    type: array
+                    items: { $ref: '#/components/schemas/Course' }
+                  total: { type: integer }
+                  page: { type: integer }
+                  pages: { type: integer }
+                  limit: { type: integer }
+
+  /api/v1/courses/featured:
+    get:
+      tags: [courses]
+      summary: Get featured courses
+      responses:
+        '200':
+          description: Featured courses
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  courses:
+                    type: array
+                    items: { $ref: '#/components/schemas/Course' }
+
+  /api/v1/courses/search:
+    get:
+      tags: [courses]
+      summary: Full-text course search
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Search results
+
+  /api/v1/courses/{id}:
+    get:
+      tags: [courses]
+      summary: Get course by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Course details
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Course' }
+        '404':
+          description: Course not found
+
+  /api/v1/categories:
+    get:
+      tags: [categories]
+      summary: List all categories
+      responses:
+        '200':
+          description: Category list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  categories:
+                    type: array
+                    items: { type: string }
+
+components:
+  schemas:
+    Instructor:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: string }
+        title: { type: string }
+        avatarUrl: { type: string }
+
+    Course:
+      type: object
+      properties:
+        id: { type: string }
+        title: { type: string }
+        slug: { type: string }
+        description: { type: string }
+        shortDescription: { type: string }
+        category: { type: string }
+        level:
+          type: string
+          enum: [beginner, intermediate, advanced]
+        language: { type: string }
+        instructor: { $ref: '#/components/schemas/Instructor' }
+        price: { type: number }
+        currency: { type: string }
+        originalPrice: { type: number }
+        durationHours: { type: number }
+        lectureCount: { type: integer }
+        enrolledCount: { type: integer }
+        rating: { type: number, minimum: 0, maximum: 5 }
+        reviewCount: { type: integer }
+        isFeatured: { type: boolean }
+        status: { type: string, enum: [draft, published, archived] }
+        thumbnail: { type: string }
+        tags: { type: array, items: { type: string } }
+        learningOutcomes: { type: array, items: { type: string } }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }

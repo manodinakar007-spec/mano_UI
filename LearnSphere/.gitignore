@@ -1,0 +1,52 @@
+# Node
+node_modules/
+dist/
+.yarn/cache
+.yarn/install-state.gz
+*.log
+npm-debug.log*
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+
+# Go
+vendor/
+*.exe
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Docker
+.dockerignore
+
+# IDE
+.vscode/settings.json
+.idea/
+*.swp
+
+# Claude Code
+.claude/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Build artifacts
+coverage/
+*.tgz
+
+# Kubernetes secrets (never commit these)
+k8s/base/secrets.yaml
+k8s/overlays/*/secrets.yaml
+
+# Local configuration backups
+*.backup
+*.pre-security

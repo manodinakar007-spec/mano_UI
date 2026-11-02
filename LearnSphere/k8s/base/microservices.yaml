@@ -1,0 +1,381 @@
+# ─── Course Catalog ──────────────────────────────────────────────────────────
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: course-catalog
+  namespace: skillfyme
+  labels:
+    app: course-catalog
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: course-catalog
+  template:
+    metadata:
+      labels:
+        app: course-catalog
+    spec:
+      containers:
+        - name: course-catalog
+          image: ghcr.io/skillfyme/course-catalog:latest
+          ports:
+            - containerPort: 9101
+          env:
+            - name: PORT
+              value: "9101"
+            - name: MONGODB_URI
+              valueFrom:
+                secretKeyRef:
+                  name: skillfyme-secrets
+                  key: MONGODB_URI
+          resources:
+            requests: { cpu: "100m", memory: "256Mi" }
+            limits: { cpu: "500m", memory: "512Mi" }
+          livenessProbe:
+            httpGet: { path: /health, port: 9101 }
+            initialDelaySeconds: 20
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: course-catalog
+  namespace: skillfyme
+spec:
+  selector:
+    app: course-catalog
+  ports:
+    - port: 9101
+      targetPort: 9101
+---
+# ─── Learning Path ───────────────────────────────────────────────────────────
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: learning-path
+  namespace: skillfyme
+  labels:
+    app: learning-path
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: learning-path
+  template:
+    metadata:
+      labels:
+        app: learning-path
+    spec:
+      containers:
+        - name: learning-path
+          image: ghcr.io/skillfyme/learning-path:latest
+          ports:
+            - containerPort: 9102
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: skillfyme-secrets
+                  key: DATABASE_URL
+          resources:
+            requests: { cpu: "100m", memory: "256Mi" }
+            limits: { cpu: "500m", memory: "512Mi" }
+          livenessProbe:
+            httpGet: { path: /health, port: 9102 }
+            initialDelaySeconds: 20
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: learning-path
+  namespace: skillfyme
+spec:
+  selector:
+    app: learning-path
+  ports:
+    - port: 9102
+      targetPort: 9102
+---
+# ─── Assessment Engine ───────────────────────────────────────────────────────
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: assessment-engine
+  namespace: skillfyme
+  labels:
+    app: assessment-engine
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: assessment-engine
+  template:
+    metadata:
+      labels:
+        app: assessment-engine
+    spec:
+      containers:
+        - name: assessment-engine
+          image: ghcr.io/skillfyme/assessment-engine:latest
+          ports:
+            - containerPort: 9103
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: skillfyme-secrets
+                  key: DATABASE_URL
+          resources:
+            requests: { cpu: "50m", memory: "64Mi" }
+            limits: { cpu: "300m", memory: "256Mi" }
+          livenessProbe:
+            httpGet: { path: /health, port: 9103 }
+            initialDelaySeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: assessment-engine
+  namespace: skillfyme
+spec:
+  selector:
+    app: assessment-engine
+  ports:
+    - port: 9103
+      targetPort: 9103
+---
+# ─── Live Session ────────────────────────────────────────────────────────────
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: live-session
+  namespace: skillfyme
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: live-session
+  template:
+    metadata:
+      labels:
+        app: live-session
+    spec:
+      containers:
+        - name: live-session
+          image: ghcr.io/skillfyme/live-session:latest
+          ports:
+            - containerPort: 9104
+          envFrom:
+            - configMapRef:
+                name: skillfyme-config
+          env:
+            - name: MONGODB_URI
+              valueFrom:
+                secretKeyRef:
+                  name: skillfyme-secrets
+                  key: MONGODB_URI
+          resources:
+            requests: { cpu: "100m", memory: "256Mi" }
+            limits: { cpu: "500m", memory: "512Mi" }
+          livenessProbe:
+            httpGet: { path: /health, port: 9104 }
+            initialDelaySeconds: 20
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: live-session
+  namespace: skillfyme
+spec:
+  selector:
+    app: live-session
+  ports:
+    - port: 9104
+      targetPort: 9104
+---
+# ─── Credits & Currency ──────────────────────────────────────────────────────
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: credits-currency
+  namespace: skillfyme
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: credits-currency
+  template:
+    metadata:
+      labels:
+        app: credits-currency
+    spec:
+      containers:
+        - name: credits-currency
+          image: ghcr.io/skillfyme/credits-currency:latest
+          ports:
+            - containerPort: 9105
+          envFrom:
+            - configMapRef:
+                name: skillfyme-config
+          resources:
+            requests: { cpu: "50m", memory: "128Mi" }
+            limits: { cpu: "200m", memory: "256Mi" }
+          livenessProbe:
+            httpGet: { path: /health, port: 9105 }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: credits-currency
+  namespace: skillfyme
+spec:
+  selector:
+    app: credits-currency
+  ports:
+    - port: 9105
+      targetPort: 9105
+---
+# ─── Enrollment ──────────────────────────────────────────────────────────────
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: enrollment
+  namespace: skillfyme
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: enrollment
+  template:
+    metadata:
+      labels:
+        app: enrollment
+    spec:
+      containers:
+        - name: enrollment
+          image: ghcr.io/skillfyme/enrollment:latest
+          ports:
+            - containerPort: 9106
+          envFrom:
+            - configMapRef:
+                name: skillfyme-config
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: skillfyme-secrets
+                  key: DATABASE_URL
+          resources:
+            requests: { cpu: "100m", memory: "256Mi" }
+            limits: { cpu: "500m", memory: "512Mi" }
+          livenessProbe:
+            httpGet: { path: /health, port: 9106 }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: enrollment
+  namespace: skillfyme
+spec:
+  selector:
+    app: enrollment
+  ports:
+    - port: 9106
+      targetPort: 9106
+---
+# ─── Payment ─────────────────────────────────────────────────────────────────
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: payment
+  namespace: skillfyme
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: payment
+  template:
+    metadata:
+      labels:
+        app: payment
+    spec:
+      containers:
+        - name: payment
+          image: ghcr.io/skillfyme/payment:latest
+          ports:
+            - containerPort: 9107
+          envFrom:
+            - configMapRef:
+                name: skillfyme-config
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: skillfyme-secrets
+                  key: DATABASE_URL
+            - name: STRIPE_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: skillfyme-secrets
+                  key: STRIPE_SECRET_KEY
+          resources:
+            requests: { cpu: "100m", memory: "256Mi" }
+            limits: { cpu: "500m", memory: "512Mi" }
+          livenessProbe:
+            httpGet: { path: /health, port: 9107 }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: payment
+  namespace: skillfyme
+spec:
+  selector:
+    app: payment
+  ports:
+    - port: 9107
+      targetPort: 9107
+---
+# ─── Notification ────────────────────────────────────────────────────────────
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: notification
+  namespace: skillfyme
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: notification
+  template:
+    metadata:
+      labels:
+        app: notification
+    spec:
+      containers:
+        - name: notification
+          image: ghcr.io/skillfyme/notification:latest
+          ports:
+            - containerPort: 9108
+          envFrom:
+            - configMapRef:
+                name: skillfyme-config
+            - secretRef:
+                name: skillfyme-secrets
+          resources:
+            requests: { cpu: "50m", memory: "128Mi" }
+            limits: { cpu: "200m", memory: "256Mi" }
+          livenessProbe:
+            httpGet: { path: /health, port: 9108 }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: notification
+  namespace: skillfyme
+spec:
+  selector:
+    app: notification
+  ports:
+    - port: 9108
+      targetPort: 9108

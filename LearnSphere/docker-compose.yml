@@ -1,0 +1,295 @@
+networks:
+  skillfyme-net:
+    driver: bridge
+
+volumes:
+  mongo-data:
+  postgres-data:
+  redis-data:
+  elasticsearch-data:
+
+services:
+  # ─────────────────────────────────────────────
+  # Infrastructure
+  # ─────────────────────────────────────────────
+  mongodb:
+    image: mongo:7
+    container_name: skillfyme-mongo
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: skillfyme
+      MONGO_INITDB_ROOT_PASSWORD: skillfyme_secret
+      MONGO_INITDB_DATABASE: skillfyme
+    volumes:
+      - mongo-data:/data/db
+      - ./scripts/mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
+    networks:
+      - skillfyme-net
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: skillfyme-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: skillfyme
+      POSTGRES_PASSWORD: skillfyme_secret
+      POSTGRES_DB: skillfyme
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./scripts/postgres-init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    networks:
+      - skillfyme-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U skillfyme"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: skillfyme-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    volumes:
+      - redis-data:/data
+    networks:
+      - skillfyme-net
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.11.0
+    container_name: skillfyme-elasticsearch
+    restart: unless-stopped
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - ES_JAVA_OPTS=-Xms512m -Xmx512m
+    volumes:
+      - elasticsearch-data:/usr/share/elasticsearch/data
+    networks:
+      - skillfyme-net
+
+  kafka:
+    image: confluentinc/cp-kafka:7.5.0
+    container_name: skillfyme-kafka
+    restart: unless-stopped
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+    depends_on:
+      - zookeeper
+    networks:
+      - skillfyme-net
+
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.5.0
+    container_name: skillfyme-zookeeper
+    restart: unless-stopped
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+    networks:
+      - skillfyme-net
+
+  # ─────────────────────────────────────────────
+  # Application Services
+  # ─────────────────────────────────────────────
+  ui-frontend:
+    build:
+      context: ./services/ui-frontend
+      dockerfile: Dockerfile
+      args:
+        VITE_STRIPE_PUBLISHABLE_KEY: ${VITE_STRIPE_PUBLISHABLE_KEY}
+    container_name: skillfyme-ui-frontend
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    depends_on:
+      - ui-backend
+    networks:
+      - skillfyme-net
+
+  ui-backend:
+    build:
+      context: ./services/ui-backend
+      dockerfile: Dockerfile
+    container_name: skillfyme-ui-backend
+    restart: unless-stopped
+    environment:
+      PORT: 4000
+      NODE_ENV: production
+      REDIS_URL: redis://redis:6379
+      COURSE_CATALOG_URL: http://course-catalog:9101
+      LEARNING_PATH_URL: http://learning-path:9102
+      ASSESSMENT_ENGINE_URL: http://assessment-engine:9103
+      LIVE_SESSION_URL: http://live-session:9104
+      CREDITS_CURRENCY_URL: http://credits-currency:9105
+      ENROLLMENT_URL: http://enrollment:9106
+      PAYMENT_URL: http://payment:9107
+      NOTIFICATION_URL: http://notification:9108
+      JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in .env}
+      LOG_LEVEL: info
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - skillfyme-net
+
+  course-catalog:
+    build:
+      context: ./services/course-catalog
+      dockerfile: Dockerfile
+    container_name: skillfyme-course-catalog
+    restart: unless-stopped
+    environment:
+      PORT: 9101
+      NODE_ENV: production
+      MONGODB_URI: mongodb://skillfyme:skillfyme_secret@mongodb:27017/skillfyme?authSource=admin
+      ELASTICSEARCH_URL: http://elasticsearch:9200
+      LOG_LEVEL: info
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    networks:
+      - skillfyme-net
+
+  learning-path:
+    build:
+      context: ./services/learning-path
+      dockerfile: Dockerfile
+    container_name: skillfyme-learning-path
+    restart: unless-stopped
+    environment:
+      PORT: 9102
+      DATABASE_URL: postgresql+asyncpg://skillfyme:skillfyme_secret@postgres:5432/skillfyme
+      LOG_LEVEL: info
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - skillfyme-net
+
+  assessment-engine:
+    build:
+      context: ./services/assessment-engine
+      dockerfile: Dockerfile
+    container_name: skillfyme-assessment-engine
+    restart: unless-stopped
+    environment:
+      PORT: 9103
+      DATABASE_URL: postgres://skillfyme:skillfyme_secret@postgres:5432/skillfyme?sslmode=disable
+      LOG_LEVEL: info
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - skillfyme-net
+
+  live-session:
+    build:
+      context: ./services/live-session
+      dockerfile: Dockerfile
+    container_name: skillfyme-live-session
+    restart: unless-stopped
+    environment:
+      PORT: 9104
+      NODE_ENV: production
+      MONGODB_URI: mongodb://skillfyme:skillfyme_secret@mongodb:27017/skillfyme?authSource=admin
+      KAFKA_BROKERS: kafka:9092
+      LOG_LEVEL: info
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      kafka:
+        condition: service_started
+    networks:
+      - skillfyme-net
+
+  credits-currency:
+    build:
+      context: ./services/credits-currency
+      dockerfile: Dockerfile
+    container_name: skillfyme-credits-currency
+    restart: unless-stopped
+    environment:
+      PORT: 9105
+      NODE_ENV: production
+      REDIS_URL: redis://redis:6379
+      LOG_LEVEL: info
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - skillfyme-net
+
+  enrollment:
+    build:
+      context: ./services/enrollment
+      dockerfile: Dockerfile
+    container_name: skillfyme-enrollment
+    restart: unless-stopped
+    environment:
+      PORT: 9106
+      NODE_ENV: production
+      DATABASE_URL: postgresql://skillfyme:skillfyme_secret@postgres:5432/skillfyme
+      KAFKA_BROKERS: kafka:9092
+      COURSE_CATALOG_URL: http://course-catalog:9101
+      PAYMENT_URL: http://payment:9107
+      NOTIFICATION_URL: http://notification:9108
+      LOG_LEVEL: info
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - skillfyme-net
+
+  payment:
+    build:
+      context: ./services/payment
+      dockerfile: Dockerfile
+    container_name: skillfyme-payment
+    restart: unless-stopped
+    environment:
+      PORT: 9107
+      NODE_ENV: production
+      DATABASE_URL: postgresql://skillfyme:skillfyme_secret@postgres:5432/skillfyme
+      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:?Set STRIPE_SECRET_KEY in .env}
+      KAFKA_BROKERS: kafka:9092
+      LOG_LEVEL: info
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - skillfyme-net
+
+  notification:
+    build:
+      context: ./services/notification
+      dockerfile: Dockerfile
+    container_name: skillfyme-notification
+    restart: unless-stopped
+    environment:
+      PORT: 9108
+      NODE_ENV: production
+      KAFKA_BROKERS: kafka:9092
+      SMTP_HOST: smtp.mailtrap.io
+      SMTP_PORT: 587
+      SMTP_USER: placeholder
+      SMTP_PASS: placeholder
+      FROM_EMAIL: noreply@skillfyme.com
+      LOG_LEVEL: info
+    depends_on:
+      kafka:
+        condition: service_started
+    networks:
+      - skillfyme-net

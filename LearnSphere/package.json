@@ -1,0 +1,37 @@
+{
+  "name": "skillfyme-platform",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Skillfyme — Enterprise polyglot microservice learning platform",
+  "workspaces": [
+    "services/ui-frontend",
+    "services/ui-backend",
+    "services/course-catalog",
+    "services/live-session",
+    "services/credits-currency",
+    "services/enrollment",
+    "services/payment",
+    "services/notification",
+    "packages/query-validator"
+  ],
+  "scripts": {
+    "dev": "concurrently --names \"UI,BFF,CATALOG,SESSION,CREDITS,ENROLL,PAYMENT,NOTIFY\" --prefix-colors \"cyan,magenta,green,yellow,blue,red,white,gray\" \"yarn workspace @skillfyme/ui-frontend dev\" \"yarn workspace @skillfyme/ui-backend dev\" \"yarn workspace @skillfyme/course-catalog dev\" \"yarn workspace @skillfyme/live-session dev\" \"yarn workspace @skillfyme/credits-currency dev\" \"yarn workspace @skillfyme/enrollment dev\" \"yarn workspace @skillfyme/payment dev\" \"yarn workspace @skillfyme/notification dev\"",
+    "build": "yarn workspaces foreach -p run build",
+    "test": "yarn workspaces foreach -p run test",
+    "lint": "yarn workspaces foreach -p run lint",
+    "docker:build": "docker-compose build",
+    "docker:up": "docker-compose up",
+    "docker:down": "docker-compose down -v",
+    "k8s:deploy:dev": "kubectl apply -k k8s/overlays/dev",
+    "k8s:deploy:prod": "kubectl apply -k k8s/overlays/prod",
+    "seed": "node scripts/seed-all.js",
+    "clean": "yarn workspaces foreach -p run clean"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.0"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "yarn": ">=2.0.0"
+  }
+}

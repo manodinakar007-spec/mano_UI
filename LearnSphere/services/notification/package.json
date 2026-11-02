@@ -1,0 +1,14 @@
+{
+  "name": "@skillfyme/notification",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "main": "src/server.js",
+  "scripts": { "dev": "nodemon src/server.js", "start": "node src/server.js", "build": "echo 'No build step'" },
+  "dependencies": {
+    "cors": "^2.8.5", "express": "^4.18.2", "helmet": "^7.1.0",
+    "kafkajs": "^2.2.4", "nodemailer": "^6.9.7",
+    "pino": "^8.16.0", "pino-http": "^9.0.0"
+  },
+  "devDependencies": { "nodemon": "^3.0.2" }
+}

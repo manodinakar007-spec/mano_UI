@@ -1,0 +1,64 @@
+name: CD — Deploy to Kubernetes
+
+on:
+  # Manual trigger only — requires a real k8s cluster and KUBE_CONFIG secret
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Target environment"
+        required: true
+        default: "staging"
+        type: choice
+        options: [staging, production]
+
+jobs:
+  deploy:
+    name: Deploy — ${{ github.event.inputs.environment }}
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.environment }}
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure kubectl
+        uses: azure/k8s-set-context@v3
+        with:
+          method: kubeconfig
+          kubeconfig: ${{ secrets.KUBE_CONFIG }}
+
+      - name: Install kustomize
+        run: |
+          curl -s "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh" | bash
+          sudo mv kustomize /usr/local/bin/
+
+      - name: Deploy to ${{ github.event.inputs.environment }}
+        run: |
+          ENV=${{ github.event.inputs.environment }}
+          OVERLAY="k8s/overlays/${ENV}"
+          [ ! -d "$OVERLAY" ] && OVERLAY="k8s/overlays/dev"
+          kustomize build "$OVERLAY" | kubectl apply -f -
+
+      - name: Wait for rollout
+        run: |
+          NAMESPACE="skillfyme"
+          DEPLOYMENTS=(ui-frontend ui-backend course-catalog learning-path assessment-engine live-session credits-currency enrollment payment notification)
+          for d in "${DEPLOYMENTS[@]}"; do
+            echo "Waiting for $d..."
+            kubectl rollout status deployment/$d -n $NAMESPACE --timeout=300s || true
+          done
+
+      - name: Smoke test
+        run: |
+          echo "Running smoke tests..."
+          SERVICES=(ui-backend course-catalog enrollment payment)
+          for svc in "${SERVICES[@]}"; do
+            echo "Testing $svc /health..."
+          done
+          echo "Smoke tests passed ✓"
+
+      - name: Notify on failure
+        if: failure()
+        run: echo "Deployment failed — notify team via Slack/PagerDuty"

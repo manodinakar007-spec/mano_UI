@@ -1,0 +1,32 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+bases:
+  - ../../base
+
+namespace: skillfyme
+
+commonLabels:
+  environment: production
+
+images:
+  - name: ghcr.io/skillfyme/ui-frontend
+    newTag: "1.0.0"
+  - name: ghcr.io/skillfyme/ui-backend
+    newTag: "1.0.0"
+  - name: ghcr.io/skillfyme/course-catalog
+    newTag: "1.0.0"
+  - name: ghcr.io/skillfyme/learning-path
+    newTag: "1.0.0"
+  - name: ghcr.io/skillfyme/assessment-engine
+    newTag: "1.0.0"
+  - name: ghcr.io/skillfyme/live-session
+    newTag: "1.0.0"
+  - name: ghcr.io/skillfyme/credits-currency
+    newTag: "1.0.0"
+  - name: ghcr.io/skillfyme/enrollment
+    newTag: "1.0.0"
+  - name: ghcr.io/skillfyme/payment
+    newTag: "1.0.0"
+  - name: ghcr.io/skillfyme/notification
+    newTag: "1.0.0"
